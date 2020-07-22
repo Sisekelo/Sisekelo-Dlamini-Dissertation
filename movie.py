@@ -235,8 +235,6 @@ def preprocessing(data):
     changeColumnOrder('profit',0,data)
     changeColumnOrder('percentage_profit',1,data)
 
-    data.percentage_profit.describe()
-
     changeColumnOrder('percentage_profit',1,data)
     getCorr(data)
 
@@ -258,8 +256,8 @@ def preprocessing(data):
     # bins = [np.NINF,-100,0,100,np.inf]
     # names = ['less than -100','-100 to 0','0 to 100','more than 100']
 
-    bins = [0,100,300,500,np.inf]
-    names = ['0-100','100-300','300-500','500+']
+    bins = [np.NINF,0,100,300,500,np.inf]
+    names = ['Less than zero','0-100','100-300','300-500','500+']
 
     data['profit_cat'] = pd.cut(data['percentage_profit'], bins, labels=names)
 
@@ -396,8 +394,6 @@ def preprocessing(data):
     X = data.drop(['profit_cat_enc'], axis = 1)
     Y = data["profit_cat_enc"]
 
-    test = pd.DataFrame()
-
     # st.write("scaled_data")
     # st.write(scaled_df.head())
 
@@ -491,14 +487,14 @@ def accept_user_data(original_language_encoded,production_companies,production_c
 	else:
 		collection = 0
 
-	homepage_input = st.radio("Does it have a homepage",('Yes', 'No'))
+	homepage_input = st.radio("Does your movie have a website?",('Yes', 'No'))
 
 	if homepage_input == "Yes":
 		homepage = 1
 	else:
 		homepage = 0
 
-	budget = st.slider('What is the movie budget?', 1000000, 700000000, 200000000)
+	budget = st.slider('What is the movie budget (USD) ?', 1000000, 700000000, 200000000)
 	runtime = st.slider('How long will the movie run in minutes?',30,500,60)
 
 	#TODO how are languages encoded, genre,production company,spoken language, production country?
@@ -634,8 +630,8 @@ def run_sentiment_analysis(txt):
 def main():
 	st.title("Predicting the success of a Hollywood movie")
 
-	st.write("How much profit will your movie make?")
-	st.write("Depending how you answer the next questions, this model will determine how much profit your movie is expected to make")
+	st.write("How much profit will your movie make based?")
+	st.write("Depending how you answer the next questions, this model will determine how much profit your movie is expected to make compared to your initial budget.")
 	data = loadData()
 	X_train, X_test, Y_train, Y_test,original_language_encoded,production_companies,production_countries,spoken_languages,genres,profit_buckets = preprocessing(data)
 
@@ -647,7 +643,18 @@ def main():
 
 	# ML Section
 	choose_model = st.sidebar.selectbox("Choose the ML Model",
-		["Random Forest", "Decision Tree", "K-Nearest Neighbours"])
+		["Decision Tree","Random Forest", "K-Nearest Neighbours"])
+
+	st.sidebar.subheader("ABOUT")
+	st.sidebar.markdown("This is a classification exercise. It shall classify movies according to the expected groups for profit.")
+	st.sidebar.markdown("Profit is calculated as:")
+	st.sidebar.markdown("**(REVENUE - BUDGET / BUDGET) x 100**")
+
+	profit_buckets.columns = ['Class', 'Profit Range']
+
+	profit_buckets.set_index('Class')
+
+	st.sidebar.table(profit_buckets.sort_values('Class'))
 
 	if(choose_model == "Decision Tree"):
 		score, tree = decisionTree(X_train, X_test, Y_train)
@@ -655,25 +662,24 @@ def main():
 		st.write(score,"%")
 		# st.text("Report of Decision Tree model is: ")
 		# st.write(report)
-		if(st.checkbox("Predict your own",value=True)):
+		if(st.checkbox("Predict your own",value=False)):
 
 			user_prediction_data = accept_user_data(original_language_encoded,production_companies,production_countries,spoken_languages,genres)
 
-			if st.button('Predict!'):
-
+			if st.button('Predict'):
 
 				pred = tree.predict(user_prediction_data)
 				prob = tree.predict_proba(user_prediction_data)
 
-				st.write(profit_buckets)
+				result = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
 
-				st.write('the movie is expected to make this much in percentage profit:')
+				st.write("The movie is expected to make: ", result.iloc[0], "%")
 
-				st.write(profit_buckets.loc[profit_buckets['profit_cat'] == pred[0]]['profit_cat_fixed'])
+				result_class = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
 
-				st.write(pred)
-
-				st.write("The probability is: ", prob)
+				st.write("The probabilities of each class are:")
+				st.table(prob)
+				st.bar_chart(prob.transpose())
 
 	elif(choose_model == "Random Forest"):
 		st.subheader("Using Random Forest")
@@ -691,15 +697,14 @@ def main():
 				pred = forest.predict(user_prediction_data)
 				prob = forest.predict_proba(user_prediction_data)
 
-				st.write(profit_buckets)
+				result = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
 
-				st.write('the movie is expected to make this much in percentage profit:')
+				st.write("The movie is expected to make: ", result.iloc[0], "%")
 
-				st.write(profit_buckets.loc[profit_buckets['profit_cat'] == pred[0]]['profit_cat_fixed'])
+				result_class = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
 
-				st.write(pred)
-
-				st.write("The probability is: ", prob)
+				st.write("The probabilities of each class are:")
+				st.table(prob)
 
 	elif(choose_model == "K-Nearest Neighbours"):
 		st.subheader("Using KNN")
@@ -717,18 +722,14 @@ def main():
 				pred = clf.predict(user_prediction_data)
 				prob = clf.predict_proba(user_prediction_data)
 
-				st.write(profit_buckets)
+				result = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
 
-				st.write('the movie is expected to make this much in percentage profit:')
+				st.write("The movie is expected to make: ", result.iloc[0], "%")
 
-				st.write(profit_buckets.loc[profit_buckets['profit_cat'] == pred[0]]['profit_cat_fixed'])
+				result_class = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
 
-				st.write(pred)
-
-				st.write("The probability is: ", prob)
-
-
-
+				st.write("The probabilities of each class are:")
+				st.table(prob)
 
 if __name__ == "__main__":
 	main()
