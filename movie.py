@@ -2,7 +2,6 @@ import pandas_profiling as pp
 import pandas as pd
 import numpy as np
 import streamlit as st
-np.set_printoptions(threshold=np.inf)
 import seaborn as sns
 
 from matplotlib import pyplot as plt
@@ -253,11 +252,11 @@ def preprocessing(data):
     # bins = [np.NINF,0,100,400,500,np.inf]
     # names = ['less than 0','0 - 100','100-300','400-500','500+']
 
-    # bins = [np.NINF,-100,0,100,np.inf]
-    # names = ['less than -100','-100 to 0','0 to 100','more than 100']
+    bins = [np.NINF,-100,0,100,np.inf]
+    names = ['less than -100','-100 to 0','0 to 100','more than 100']
 
-    bins = [np.NINF,0,100,300,500,np.inf]
-    names = ['Less than zero','0-100','100-300','300-500','500+']
+    # bins = [np.NINF,0,100,300,500,np.inf]
+    # names = ['Less than zero','0-100','100-300','300-500','500+']
 
     data['profit_cat'] = pd.cut(data['percentage_profit'], bins, labels=names)
 
@@ -427,8 +426,7 @@ def random_forest(X_train, X_test, Y_train, Y_test):
 	#240 seems to be a sweet spot,340
 	forest = RandomForestClassifier(n_estimators=340)
 	forest.fit(X_train, Y_train)
-	Y_prediction = forest.predict(X_test)
-	forest.score(X_train, Y_train)
+	#Y_prediction = forest.predict(X_test)
 	#score = round(forest.score(X_train, Y_train) * 100, 2)
 
 	scores = cross_val_score(forest, X_train, Y_train, cv=4)
@@ -445,7 +443,7 @@ def decisionTree(X_train, X_test, Y_train):
 	# Train the model
 	tree = DecisionTreeClassifier(max_leaf_nodes=4, random_state=1)
 	tree.fit(X_train, Y_train)
-	y_pred = tree.predict(X_test)
+	#y_pred = tree.predict(X_test)
 	#score = round(tree.score(X_train, Y_train) * 100, 2)
 	#score = metrics.accuracy_score(y_test, y_pred) * 100
 	#report = classification_report(y_test, y_pred)
@@ -463,7 +461,7 @@ def knn_classifier(X_train, X_test, Y_train, Y_test):
 
 	clf = KNeighborsClassifier(n_neighbors=65)
 	clf.fit(X_train, Y_train)
-	y_pred = clf.predict(X_test)
+	#y_pred = clf.predict(X_test)
 	#score = metrics.accuracy_score(Y_test, y_pred) * 100
 	#score = round(clf.score(X_train, Y_train) * 100, 2)
 	#report = classification_report(Y_test, y_pred)
@@ -594,6 +592,10 @@ def accept_user_data(original_language_encoded,production_companies,production_c
 	#PRODUCTION COUNTRY
 	st.subheader('Final details')
 
+	st.write("**FYI:**")
+	st.markdown("_The **subjectivity** of a phrase is a float within the range 0 and 1 where 0 is very objective and 1 is very subjective_")
+	st.markdown("_**Polarity** is float which lies in the range of -1 and 1 where 1 means positive statement and -1 means a negative statement_")
+
 	tagline = st.text_input('Movie tagline', '')
 	tagline_polarity, tagline_subjectivity = run_sentiment_analysis(tagline)
 	st.write('Polarity: ',tagline_polarity)
@@ -627,6 +629,21 @@ def run_sentiment_analysis(txt):
 	subjectivity = text_blob.sentiment.subjectivity
 	return polarity,subjectivity
 
+def use_user_prediction(pred,prob,profit_buckets):
+	result = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
+
+	st.write("The movie is expected to make: ", result.iloc[0], "%")
+
+	result_class = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
+
+	st.write("The probabilities of each class are:")
+	prob_df = pd.DataFrame(prob)
+	sorted_buckets = profit_buckets.sort_values('Profit Range')
+	prob_df.columns = sorted_buckets['Profit Range']
+	st.table(prob)
+	st.bar_chart(prob_df.transpose())
+
+
 def main():
 	st.title("Predicting the success of a Hollywood movie")
 
@@ -657,6 +674,7 @@ def main():
 	st.sidebar.table(profit_buckets.sort_values('Class'))
 
 	if(choose_model == "Decision Tree"):
+		
 		score, tree = decisionTree(X_train, X_test, Y_train)
 		st.text("Accuracy of Decision Tree model is: ")
 		st.write(score,"%")
@@ -671,15 +689,7 @@ def main():
 				pred = tree.predict(user_prediction_data)
 				prob = tree.predict_proba(user_prediction_data)
 
-				result = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
-
-				st.write("The movie is expected to make: ", result.iloc[0], "%")
-
-				result_class = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
-
-				st.write("The probabilities of each class are:")
-				st.table(prob)
-				st.bar_chart(prob.transpose())
+				use_user_prediction(pred,prob,profit_buckets)
 
 	elif(choose_model == "Random Forest"):
 		st.subheader("Using Random Forest")
@@ -697,14 +707,7 @@ def main():
 				pred = forest.predict(user_prediction_data)
 				prob = forest.predict_proba(user_prediction_data)
 
-				result = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
-
-				st.write("The movie is expected to make: ", result.iloc[0], "%")
-
-				result_class = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
-
-				st.write("The probabilities of each class are:")
-				st.table(prob)
+				use_user_prediction(pred,prob,profit_buckets)
 
 	elif(choose_model == "K-Nearest Neighbours"):
 		st.subheader("Using KNN")
@@ -722,14 +725,7 @@ def main():
 				pred = clf.predict(user_prediction_data)
 				prob = clf.predict_proba(user_prediction_data)
 
-				result = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
-
-				st.write("The movie is expected to make: ", result.iloc[0], "%")
-
-				result_class = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
-
-				st.write("The probabilities of each class are:")
-				st.table(prob)
+				use_user_prediction(pred,prob,profit_buckets)
 
 if __name__ == "__main__":
 	main()
