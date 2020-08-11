@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 import seaborn as sns
+import random
 
 from matplotlib import pyplot as plt
 from textblob import TextBlob
@@ -19,6 +20,7 @@ from sklearn import linear_model
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import recall_score
 
 #cross validator
 from sklearn.model_selection import cross_val_score
@@ -115,37 +117,37 @@ def preprocessing(data):
     changeColumnOrder('has_homepage',2,data)
 
     #drop columns
-    for x in range(4, 22):
+    for x in range(1, 22):
         text = "production_company_"+str(x)
         data = data.drop(columns=[text])
 
     #replace nan with none
-    for x in range(1, 4):
-        text = "production_company_"+str(x)
-        data[text].fillna("none", inplace=True)
+    # for x in range(1, 4):
+    #     text = "production_company_"+str(x)
+    #     data[text].fillna("none", inplace=True)
 
-    #encode
-    for x in range(1, 4):
-        text = "production_company_"+str(x)
-        text_enc = text+"_enc"
-        data[text_enc]= le.fit_transform(data[text])
+    # #encode
+    # for x in range(1, 4):
+    #     text = "production_company_"+str(x)
+    #     text_enc = text+"_enc"
+    #     data[text_enc]= le.fit_transform(data[text])
 
-    production_company_1_encoded = pd.DataFrame()
-    production_company_1_encoded['production_company_1'] = data.production_company_1.unique()
-    production_company_1_encoded['production_company_1_enc'] = le.fit_transform(production_company_1_encoded['production_company_1'])
+    # production_company_1_encoded = pd.DataFrame()
+    # production_company_1_encoded['production_company_1'] = data.production_company_1.unique()
+    # production_company_1_encoded['production_company_1_enc'] = le.fit_transform(production_company_1_encoded['production_company_1'])
 
-    production_company_2_encoded = pd.DataFrame()
-    production_company_2_encoded['production_company_2'] = data.production_company_2.unique()
-    production_company_2_encoded['production_company_2_enc'] = le.fit_transform(production_company_2_encoded['production_company_2'])
+    # production_company_2_encoded = pd.DataFrame()
+    # production_company_2_encoded['production_company_2'] = data.production_company_2.unique()
+    # production_company_2_encoded['production_company_2_enc'] = le.fit_transform(production_company_2_encoded['production_company_2'])
 
-    production_company_3_encoded = pd.DataFrame()
-    production_company_3_encoded['production_company_3'] = data.production_company_3.unique()
-    production_company_3_encoded['production_company_3_enc'] = le.fit_transform(production_company_3_encoded['production_company_3'])
+    # production_company_3_encoded = pd.DataFrame()
+    # production_company_3_encoded['production_company_3'] = data.production_company_3.unique()
+    # production_company_3_encoded['production_company_3_enc'] = le.fit_transform(production_company_3_encoded['production_company_3'])
 
     #drop encoded columns
-    for x in range(1, 4):
-        text = "production_company_"+str(x)
-        data = data.drop(columns=[text])
+    # for x in range(1, 4):
+    #     text = "production_company_"+str(x)
+    #     data = data.drop(columns=[text])
 
     #drop columns
     for x in range(4, 11):
@@ -158,6 +160,7 @@ def preprocessing(data):
         data[text].fillna("none", inplace=True)
 
     #encode
+    
     for x in range(1, 4):
         text = "spoken_language_"+str(x)
         text_enc = text+"_enc"
@@ -252,11 +255,14 @@ def preprocessing(data):
     # bins = [np.NINF,0,100,400,500,np.inf]
     # names = ['less than 0','0 - 100','100-300','400-500','500+']
 
-    bins = [np.NINF,-100,0,100,np.inf]
-    names = ['less than -100','-100 to 0','0 to 100','more than 100']
+    # bins = [np.NINF,-100,0,100,np.inf]
+    # names = ['less than -100','-100 to 0','0 to 100','more than 100']
 
     # bins = [np.NINF,0,100,300,500,np.inf]
     # names = ['Less than zero','0-100','100-300','300-500','500+']
+
+    bins = [np.NINF,250,500,np.inf]
+    names = ['0 to 250','250 - 500','more than 500']
 
     data['profit_cat'] = pd.cut(data['percentage_profit'], bins, labels=names)
 
@@ -297,13 +303,13 @@ def preprocessing(data):
     plt.xlabel('Year')
     plt.ylabel('Revenue')
 
-    data["release_month"] = nan
-    data["release_day"] = nan
+    # data["release_month"] = nan
+    # data["release_day"] = nan
 
-    for index, x in enumerate(data["release_date"].dt.month):
-	    data["release_month"][index] =  x
-    for index, x in enumerate(data["release_date"].dt.day):
-	    data["release_day"][index] = x
+    # for index, x in enumerate(data["release_date"].dt.month):
+	   #  data["release_month"][index] =  x
+    # for index, x in enumerate(data["release_date"].dt.day):
+	   #  data["release_day"][index] = x
 
     # In[28]:
     data = data.drop(columns=['release_date'])
@@ -366,7 +372,7 @@ def preprocessing(data):
 
     getCorr(data)
 
-    data = data.drop(['overview','tagline','title'], axis =1)
+    data = data.drop(['overview','tagline','title','runtime'], axis =1)
 
     data6 = pd.DataFrame()
     #data6['tagline_polarity','overview_polarity','has_collection','tagline_subjectivity','title_polarity','genre_1_enc','genre_2_enc','production_country_2_enc','genre_3_enc','overview_subjectivity'] = data['tagline_polarity','overview_polarity','has_collection','tagline_subjectivity','title_polarity','genre_1_enc','genre_2_enc','production_country_2_enc','genre_3_enc','overview_subjectivity']
@@ -390,6 +396,10 @@ def preprocessing(data):
 
     # dividing the X and the Y from the dataset
     #data = data.drop(['release_date','popularity','runtime','vote_average'], axis =1)
+    corrmat = data.corr()
+    fig = plt.figure(figsize = (50, 50))
+    sns.heatmap(corrmat, vmax = 1, square = True,annot=True)
+
     X = data.drop(['profit_cat_enc'], axis = 1)
     Y = data["profit_cat_enc"]
 
@@ -411,27 +421,20 @@ def preprocessing(data):
     # Split the data into training and testing sets
     X_train, X_test, Y_train, Y_test = train_test_split(xData, yData, test_size = 0.2, random_state = 42)
 
-    production_companies = [production_company_1_encoded,production_company_2_encoded,production_company_3_encoded]
+    # production_companies = [production_company_1_encoded,production_company_2_encoded,production_company_3_encoded]
     spoken_languages = [spoken_language_1_encoded,spoken_language_2_encoded,spoken_language_3_encoded]
     production_countries = [production_country_1_encoded,production_country_2_encoded,production_country_3_encoded]
     genres =[genre_1_encoded,genre_2_encoded,genre_3_encoded]
 
     #THIS IS WHERE RETURN SHOULD HAPPEN
-    return X_train, X_test, Y_train, Y_test,original_language_encoded,production_companies,production_countries,spoken_languages,genres,profit_buckets
+    return X_train, X_test, Y_train, Y_test,original_language_encoded,production_countries,spoken_languages,genres,profit_buckets,data
 
-#KNN Classifier
+#Random Forest Classifier
 @st.cache(suppress_st_warning=True,allow_output_mutation=True)
 def random_forest(X_train, X_test, Y_train, Y_test):
-
-	#240 seems to be a sweet spot,340
 	forest = RandomForestClassifier(n_estimators=340)
 	forest.fit(X_train, Y_train)
-	#Y_prediction = forest.predict(X_test)
-	#score = round(forest.score(X_train, Y_train) * 100, 2)
-
 	scores = cross_val_score(forest, X_train, Y_train, cv=4)
-	#st.write("The scores are:")
-	#st.write("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
 	score = round(scores.mean() * 100, 2)
 
 
@@ -443,14 +446,7 @@ def decisionTree(X_train, X_test, Y_train):
 	# Train the model
 	tree = DecisionTreeClassifier(max_leaf_nodes=4, random_state=1)
 	tree.fit(X_train, Y_train)
-	#y_pred = tree.predict(X_test)
-	#score = round(tree.score(X_train, Y_train) * 100, 2)
-	#score = metrics.accuracy_score(y_test, y_pred) * 100
-	#report = classification_report(y_test, y_pred)
-
 	scores = cross_val_score(tree, X_train, Y_train, cv=4)
-	#st.write("The scores are:")
-	#st.write("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
 	score = round(scores.mean() * 100, 2)
 
 	return score, tree
@@ -461,20 +457,13 @@ def knn_classifier(X_train, X_test, Y_train, Y_test):
 
 	clf = KNeighborsClassifier(n_neighbors=65)
 	clf.fit(X_train, Y_train)
-	#y_pred = clf.predict(X_test)
-	#score = metrics.accuracy_score(Y_test, y_pred) * 100
-	#score = round(clf.score(X_train, Y_train) * 100, 2)
-	#report = classification_report(Y_test, y_pred)
 	scores = cross_val_score(clf, X_train, Y_train, cv=4)
-	#st.write("The scores are:")
-	#st.write("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
 	score = round(scores.mean() * 100, 2)
-	#st.write(report)
 
 	return score, clf
 
 # Accepting user data for predicting its Member Type
-def accept_user_data(original_language_encoded,production_companies,production_countries,spoken_languages,genres):
+def accept_user_data(original_language_encoded,production_countries,spoken_languages,genres):
 
 	output_array = []
 
@@ -492,61 +481,107 @@ def accept_user_data(original_language_encoded,production_companies,production_c
 	else:
 		homepage = 0
 
-	budget = st.slider('What is the movie budget (USD) ?', 1000000, 700000000, 200000000)
-	runtime = st.slider('How long will the movie run in minutes?',30,500,60)
+	initial_budget = 150000000
+
+	budget = st.slider('What is the movie budget (USD) ?', 1000000, 700000000, initial_budget)
+
+	# initial_runtime = random.randint(30,500)
+	# runtime = st.slider('How long will the movie run in minutes?',30,500,initial_runtime)
 
 	#TODO how are languages encoded, genre,production company,spoken language, production country?
 	#ORIGINAL LANGUAGE
 	original_language_dict = original_language_encoded.set_index('language').T.to_dict('list')
 	language = list(original_language_dict.keys())
 
-	original_language_input = st.selectbox("Select the language: ", language)
-	original_language_value = original_language_dict[original_language_input][0]
 
-	output_array.extend([collection,homepage,budget,runtime,original_language_value])
+
+	all_languages = {
+	  "English": "en",
+	  "French": "fr",
+	  "Korean": "ko",
+	  "Japanese": "ja",
+	  "Thai": "th",
+	  "Russian": "ru",
+	  "Italian": "it",
+	  "Spanish": "es",
+	  "German": "de",
+	  "Hindi": "hi",
+	  "Afrikaans": "af",
+	  "Catalan": "ca",
+	  "Chinese": "cn",
+	  "Turkish": "tr",
+	  "Finish ": "fi",
+	  "Arabic": "ar",
+	  "Malayalam": "ml",
+	  "Dutch": "nl",
+	  "Polish": "pl",
+	  "Hungarian": "hu",
+	  "Romanian": "ro",
+	  "Hebrew": "he",
+	  "Swedish": "sv",
+	  "Estonian": "et",
+	  "Vietnamese": "vi",
+	  "Indonesian": "id",
+	  "Urdu": "ur",
+	  "Farsi": "fa",
+	  "Pakistani": "pa",
+	  "Norwegian": "nb",
+	  "Danish": "da",
+	  "Portuguese": "pt"
+	}
+
+	all_languages_keys = list(all_languages.keys())
+
+	original_language_input = st.selectbox("Select the language: ", all_languages_keys)
+
+	coded_language_value = all_languages[original_language_input]
+
+	original_language_value = original_language_dict[coded_language_value][0]
+
+	output_array.extend([collection,homepage,budget,original_language_value])
 
 	#GENRE
 	st.subheader('Genres')
 
 	genres_dict = genres[0].set_index('genre').T.to_dict('list')
 	genres_1 = list(genres_dict.keys())
-	genres_1_input = st.selectbox("Select the first production: ", genres_1)
+	genres_1_input = st.selectbox("Select the first genre: ", genres_1)
 	genres_1_value = genres_dict[genres_1_input][0]
 
 	genres_dict = genres[1].set_index('genre').T.to_dict('list')
 	genres_2 = list(genres_dict.keys())
-	genres_2_input = st.selectbox("Select the second production: ", genres_2)
+	genres_2_input = st.selectbox("Select the second genre: ", genres_2)
 	genres_2_value = genres_dict[genres_2_input][0]
 
 	genres_dict = genres[2].set_index('genre').T.to_dict('list')
 	genres_3 = list(genres_dict.keys())
-	genres_3_input = st.selectbox("Select the third production: ", genres_3)
+	genres_3_input = st.selectbox("Select the third genre: ", genres_3)
 	genres_3_value = genres_dict[genres_3_input][0]
 
 	output_array.extend([genres_1_value,genres_2_value,genres_3_value])
 
 
 	#PRODUCTION COMPANIES
-	st.subheader('Production companies')
+	# st.subheader('Production companies')
 
-	production_companies_dict = production_companies[0].set_index('production_company_1').T.to_dict('list')
-	production_company_1 = list(production_companies_dict.keys())
-	production_company_1_input = st.selectbox("Select the first production: ", production_company_1)
-	production_company_1_value = production_companies_dict[production_company_1_input][0]
+	# production_companies_dict = production_companies[0].set_index('production_company_1').T.to_dict('list')
+	# production_company_1 = list(production_companies_dict.keys())
+	# production_company_1_input = st.selectbox("Select the first production: ", production_company_1)
+	# production_company_1_value = production_companies_dict[production_company_1_input][0]
 
-	#production_company_2_enc
-	production_companies_dict = production_companies[1].set_index('production_company_2').T.to_dict('list')
-	production_company_2 = list(production_companies_dict.keys())
-	production_company_2_input = st.selectbox("Select the second production: ", production_company_2)
-	production_company_2_value = production_companies_dict[production_company_2_input][0]
+	# #production_company_2_enc
+	# production_companies_dict = production_companies[1].set_index('production_company_2').T.to_dict('list')
+	# production_company_2 = list(production_companies_dict.keys())
+	# production_company_2_input = st.selectbox("Select the second production: ", production_company_2)
+	# production_company_2_value = production_companies_dict[production_company_2_input][0]
 
-	#production_company_3_enc
-	production_companies_dict = production_companies[2].set_index('production_company_3').T.to_dict('list')
-	production_company_3 = list(production_companies_dict.keys())
-	production_company_3_input = st.selectbox("Select the third production: ", production_company_3)
-	production_company_3_value = production_companies_dict[production_company_3_input][0]
+	# #production_company_3_enc
+	# production_companies_dict = production_companies[2].set_index('production_company_3').T.to_dict('list')
+	# production_company_3 = list(production_companies_dict.keys())
+	# production_company_3_input = st.selectbox("Select the third production: ", production_company_3)
+	# production_company_3_value = production_companies_dict[production_company_3_input][0]
 
-	output_array.extend([production_company_1_value,production_company_2_value,production_company_3_value])
+	# output_array.extend([production_company_1_value,production_company_2_value,production_company_3_value])
 
 	#SPOKEN LANGUAGE
 	st.subheader('Spoken Languages')
@@ -614,10 +649,10 @@ def accept_user_data(original_language_encoded,production_companies,production_c
 	st.write('subjectivity: ',title_subjectivity)
 	output_array.extend([title_polarity,title_subjectivity])
 
-	day = st.slider('Which day of the month will the movie be released?', 0, 30, 15)
-	month = st.slider('Which month will the movie be released',0,11,5)
+	# day = st.slider('Which day of the month will the movie be released?', 0, 30, 15)
+	# month = st.slider('Which month will the movie be released',0,11,5)
 
-	output_array.extend([day,month])
+	# output_array.extend([day,month])
 
 	user_prediction_data = np.array(output_array).reshape(1,-1)
 
@@ -632,7 +667,7 @@ def run_sentiment_analysis(txt):
 def use_user_prediction(pred,prob,profit_buckets):
 	result = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
 
-	st.write("The movie is expected to make: ", result.iloc[0], "%")
+	st.write("The movie is expected to make: ", result.iloc[0], "%"," in profit.")
 
 	result_class = profit_buckets.loc[profit_buckets['Class'] == pred[0]]['Profit Range']
 
@@ -650,12 +685,17 @@ def main():
 	st.write("How much profit will your movie make based?")
 	st.write("Depending how you answer the next questions, this model will determine how much profit your movie is expected to make compared to your initial budget.")
 	data = loadData()
-	X_train, X_test, Y_train, Y_test,original_language_encoded,production_companies,production_countries,spoken_languages,genres,profit_buckets = preprocessing(data)
 
 	# Insert Check-Box to show the snippet of the data.
 	if st.checkbox('Show Raw Data'):
 		st.subheader("Raw data")
-		st.write(data.head())
+		st.write(data.head(20))
+
+
+	X_train, X_test, Y_train, Y_test,original_language_encoded,production_countries,spoken_languages,genres,profit_buckets,data = preprocessing(data)
+	
+	if st.checkbox('Show correlation'):
+		st.write(data.corr())
 
 
 	# ML Section
@@ -682,7 +722,7 @@ def main():
 		# st.write(report)
 		if(st.checkbox("Predict your own",value=False)):
 
-			user_prediction_data = accept_user_data(original_language_encoded,production_companies,production_countries,spoken_languages,genres)
+			user_prediction_data = accept_user_data(original_language_encoded,production_countries,spoken_languages,genres)
 
 			if st.button('Predict'):
 
@@ -699,10 +739,9 @@ def main():
 
 		if(st.checkbox("Predict your own",value=True)):
 
-			user_prediction_data = accept_user_data(original_language_encoded,production_companies,production_countries,spoken_languages,genres)
+			user_prediction_data = accept_user_data(original_language_encoded,production_countries,spoken_languages,genres)
 
 			if st.button('Predict!'):
-
 
 				pred = forest.predict(user_prediction_data)
 				prob = forest.predict_proba(user_prediction_data)
@@ -717,7 +756,7 @@ def main():
 
 		if(st.checkbox("Predict your own",value=True)):
 
-			user_prediction_data = accept_user_data(original_language_encoded,production_companies,production_countries,spoken_languages,genres)
+			user_prediction_data = accept_user_data(original_language_encoded,production_countries,spoken_languages,genres)
 
 			if st.button('Predict!'):
 
